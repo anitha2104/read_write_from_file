@@ -1,0 +1,180 @@
+// this program reads data from .txt files in project dir 
+//  with only  "A,329231,B,2000,ABC,12.23" format
+//  and stores the  seq number key to respective lines (discards duplicated seq num)
+ 
+//algorithm:
+// 1. fetch all the .txt filenames and store in vector
+// 2. pop the value from  vector to parse the file contents
+// 3. store the contents into map as sequence number as key
+// 4. pull contents of map to outfile
+
+// for testing i have created some files using create_file() you can comment it
+// incase you want to have your files || modify file contents in them and test
+
+
+#include <iostream>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <iterator>
+#include <filesystem>
+#include <experimental/filesystem>
+#include <sstream>  
+#include <fstream>
+#include <map>
+using namespace std;
+typedef std::vector<std::string> stringvec;
+
+
+
+map <unsigned long, string> m1;
+void read_filename_from_vector (string name);
+void write_to_map (string name);
+bool isValid(string str);
+
+// functor object for extracting the file name from directory
+// thsi is passed to transform func of algorithm object to get filenames
+ struct path_leaf_string
+{
+    std::string operator()(const std::filesystem::directory_entry& entry) const
+    {
+        return entry.path().filename().string();
+    }
+};
+
+// validating string charcter by character for entire line
+// i did not use builtin function is check here delibretely
+// to write customised logic as my input doesnot contains  '_' which is valid string in builtin function
+bool isValid(string str) 
+{ 
+       
+    // If first character is invalid 
+    if (!((str[0] >= 'a' && str[0] <= 'z') 
+          || (str[0] >= 'A' && str[1] <= 'Z'))) 
+        return false; 
+       int n = str.length();
+    // Traverse the string for the rest of the characters 
+    for (auto i = 1; i < n; i++)
+    { 
+           if (!((str[i] >= 'a' && str[i] <= 'z') 
+              || (str[i] >= 'A' && str[i] <= 'Z') 
+              || (str[i] >= '0' && str[i] <= '9') 
+              || str[i] == '.' || str[i]==',') )
+            return false; 
+    } 
+  
+    // String is a valid identifier 
+    return true; 
+}
+
+
+// function write_to_map recives line by line string from text files,
+// stores the line to   map as sequence number key
+void write_to_map (string name){
+    char m;
+    char Msg_Type;
+	unsigned long SeqNumber;
+	bool result = isValid(name) ;
+	if (!result)
+	{
+	  cout << " this line contains invalid data hence discarding the msg and seq num  " << endl;
+	  return;
+	}
+    istringstream iss(name);
+    iss >> Msg_Type;
+    iss >> m;
+    iss >> SeqNumber;
+    m1[SeqNumber]= name;
+}
+
+
+// function send_file_tofunc recieves file names from vector and extract line by line 
+// and pass the line to write_to_vect();
+
+void read_filename_from_vector (string name){
+      
+       string line;
+       ifstream file(name);
+       if (file.is_open()){
+        while (true){
+            string line;
+            file >> line;
+            istringstream myline(line);
+            if (!file.eof()){
+            write_to_map(line);}
+            if (file.eof()) break;
+            
+        }
+       }
+
+}
+
+
+// read teh current directory for text files and push to vectors
+// it uses built in transform from algorithm.h and functor path_leaf_strings
+void read_directory(const std::string& name, stringvec& v)
+{
+    std::filesystem::path p(name);
+    std::filesystem::directory_iterator start(p);
+    std::filesystem::directory_iterator end;
+    std::transform(start, end, std::back_inserter(v), path_leaf_string());
+    
+}
+
+// just a driver program to create txt files you can disable the call 
+// if you already have some txt files in project u can coment the cal in main
+
+void create_file ()
+{
+    std::ofstream outfile ("test4.exe.txt");
+    outfile << "A,329231,B,2000,ABC,12.23" << endl;
+    outfile << "C,329232,B,2000,DEF,12.23" << endl;
+    outfile << "D,329233,B,2000,GHI,12.23" << endl;
+    outfile.close();
+    std::ofstream outfile2 ("test5.txt");
+    outfile2 << "A,329239,B,2000,JKL,12.23" << endl;
+    outfile2 << "C,329238,B,2000,MNQ,12.23" << endl;
+    outfile2 << "D,329238,B,2000,OPR,12.23" << endl;
+    outfile2.close();
+    std::ofstream outfile3 ("test6.txt");
+    outfile3 << "M,339239,B,3000,ABC,12.23" << endl;
+    outfile3 << "C,359238,B,2000,ABC,12.23" << endl;
+    outfile3 << "F,359238,B,2000,ABC,12.23" << endl;
+    outfile3.close();
+    
+    
+    
+}
+int main()
+{
+    
+    stringvec has_filenames;
+    create_file();
+    stringvec v;
+    read_directory(".", v);
+    string line;
+    for (auto x:v){
+            line=x;
+            if(line.length() < 4)
+            continue;
+            if(line.substr(line.length() - 4, std::string::npos) == ".txt")
+             has_filenames.push_back(line);
+             
+    }
+     
+     //cout<<"these are the list of files in the project directory "<<endl;
+     for(auto y:has_filenames)
+     {
+		 read_filename_from_vector(y);
+		
+     }
+     
+     cout <<"contents of outfile are"<<endl;
+     for (auto it = m1.begin(); it != m1.end(); it++)
+     {
+       std::ofstream outfile4 ("outfile");
+       outfile4 <<it->second;
+       cout  <<  it->second << endl;
+     }
+     
+}
